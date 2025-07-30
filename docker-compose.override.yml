@@ -1,0 +1,8 @@
+services:  
+  kafka:
+      mem_limit: 6g
+      cpus: 2.0
+      ulimits:
+        nofile:
+          soft: 32768
+          hard: 32768
