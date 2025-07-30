@@ -4,7 +4,7 @@ CSRF_TRUSTED_ORIGIN="http://65.109.232.162:9000"
 
 # modify generated configuration files
 
-if [ ! -e "./sentry/sentry.config.py" ]; then
+if [ ! -e "./sentry/sentry.conf.py" ]; then
     echo "don't run this script individually, run ./install.sh instead"
     exit 2
 fi
