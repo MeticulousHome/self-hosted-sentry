@@ -39,7 +39,7 @@ echo ""
 echo " > Updating CSRF trusted origins"
 echo ""
 
-sed -i "s|^#?\s*CSRF_TRUSTED_ORIGINS = \[.*\]|CSRF_TRUSTED_ORIGINS = [\"https://example.com\", \"http://127.0.0.1:9000\", \"$CSRF_TRUSTED_ORIGIN\"]|" ./sentry/sentry.conf.py
+sed -i -E "s|^#?[[:space:]]*CSRF_TRUSTED_ORIGINS = \[.*\]|CSRF_TRUSTED_ORIGINS = [\"https://example.com\", \"http://127.0.0.1:9000\", \"$CSRF_TRUSTED_ORIGIN\"]|" ./sentry/sentry.conf.py
 
 echo "   -> added $CSRF_TRUSTED_ORIGIN to the CSRF trusted origins"
 echo ""
@@ -47,9 +47,9 @@ echo ""
 echo " > Updating System URL prefix"
 echo ""
 
-sed -i "s|^#?\s*system.url-prefix:.*|system.url-prefix: $CSRF_TRUSTED_ORIGIN|" ./sentry/config.yml
+sed -i -E "s|^#?[[:space:]]*system.url-prefix:.*|system.url-prefix: $CSRF_TRUSTED_ORIGIN|" ./sentry/config.yml
 
-echo -e "   -> message.max.bytes set to  100000000\n   -> socket.timeout.ms set to 60000"
+echo -e "   -> system.url-prefix set to $CSRF_TRUSTED_ORIGIN"
 
 echo " > Checking use of Swap space"
 echo ""
@@ -59,28 +59,28 @@ SWAP_CHECK="$(swapon --show)"
 if [ -n "$SWAP_CHECK" ]; then
     echo "   -> swap space already configured"
     echo "$SWAP_CHECK" | awk 'END{print}'
-    exit 0
+else
+    # set up swapspace
+    MINIMUM_SPACE_REQUIRED=4
+
+    available_space=$(df --output=avail -BG / | tail -1 | sed 's/G//' | tr -d ' ')
+
+    if (( available_space < MINIMUM_SPACE_REQUIRED )); then
+        echo " [x] Less than $MINIMUM_SPACE_REQUIRED G available, cannot set up swap space"
+        exit 1
+    fi
+
+    SWAP_SIZE="${MINIMUM_SPACE_REQUIRED}G"
+    fallocate -l "$SWAP_SIZE" /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+
+    #save the swap config
+    echo "   -> Saving Swap space config"
+    echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 fi
 
-# set up swapspace
-MINIMUM_SPACE_REQUIRED=4
-
-available_space=$(df --output=avail -BG / | tail -1 | sed 's/G//' | tr -d ' ')
-
-if (( available_space < MINIMUM_SPACE_REQUIRED )); then
-    echo " [x] Less than $MINIMUM_SPACE_REQUIRED G available, cannot set up swap space"
-    exit 1
-fi
-
-SWAP_SIZE="${MINIMUM_SPACE_REQUIRED}G"
-fallocate -l "$SWAP_SIZE" /swapfile
-chmod 600 /swapfile
-mkswap /swapfile
-swapon /swapfile
-
-#save the swap config
-echo "   -> Saving Swap space config"
-echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
   echo ""
   echo "-----------------------------------------------------------------"
