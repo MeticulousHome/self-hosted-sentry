@@ -2,8 +2,8 @@ name: Sync Fork
 
 on:
   schedule:
-    - cron: '0 0 16 * *' # Runs daily at midnight UTC
-  workflow_dispatch: # Allows manual triggering
+    - cron: '0 0 16 * *' # every 16th of each month
+  workflow_dispatch:
 
 jobs:
   sync:
@@ -15,11 +15,15 @@ jobs:
       - name: Checkout your forked repository
         uses: actions/checkout@v4
 
-      - name: Add upstream remote
-        run: git remote add upstream https://github.com/<original-owner>/<original-repo>.git # Replace with original details
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
 
-      - name: Fetch upstream changes
-        run: git fetch upstream
+      - name: fetch upstream changes remote
+        run: |
+          git remote add upstream https://github.com/getsentry/self-hosted.git
+          git fetch upstream
 
       - name: Merge upstream into your branch
         run: |
@@ -27,4 +31,4 @@ jobs:
           git rebase upstream/master
 
       - name: Push updates to your GitHub fork
-        run: git push origin master # Or your desired branch
+        run: git push origin master
