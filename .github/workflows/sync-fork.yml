@@ -12,8 +12,10 @@ jobs:
       contents: write # Grant write permission to the workflow
 
     steps:
-      - name: Checkout your forked repository
+      - name: Checkout fork
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Git
         run: |
@@ -30,5 +32,9 @@ jobs:
           git checkout master
           git rebase upstream/master
 
-      - name: Push updates to your GitHub fork
-        run: git push origin master --force
+      - name: Push updates to fork
+        env:
+          PAT: ${{ secrets.K09_PAT }}
+        run: |
+          git remote set-url origin https://github-actions:${PAT}@github.com/${GITHUB_REPOSITORY}.git
+          git push origin master --follow-tags
