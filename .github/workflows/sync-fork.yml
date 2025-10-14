@@ -31,4 +31,4 @@ jobs:
           git rebase upstream/master
 
       - name: Push updates to your GitHub fork
-        run: git push origin master
+        run: git push origin master --force
