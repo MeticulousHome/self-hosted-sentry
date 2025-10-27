@@ -7,6 +7,14 @@ Documentation [here](https://develop.sentry.dev/self-hosted/).
 
 ## Meticulous Espresso instance
 
+### Geo location
+
+In order to use the geolocation capabilites of sentry, You need to provide a geolocation database from MaxMind, for which You will require an valid Account in MaxMind, it is free
+
+The Sentry Project makes use of the GeoIPUpdate product from MaxMind to download/update its database, so the only requirement is to provide the `GeoIP.conf` to the `geoip` directory, running `install.sh` will call an update process to the database alongside. If You dont provide a `GeoIP.conf` file, the database will be empty
+
+For more information visit [Sentry: Geolocation](https://develop.sentry.dev/self-hosted/geolocation/) and [MaxMind: Updating GeoIP and GeoLite Databases ](https://dev.maxmind.com/geoip/updating-databases/#directly-downloading-databases)
+
 ### Custom files
 
 #### configure-swap.sh
@@ -31,10 +39,10 @@ Documentation [here](https://develop.sentry.dev/self-hosted/).
 ### External requirements
 
 #### Docker
- The Self-Hosted Sentry deploymentent is completely containarized
+ The Self-Hosted Sentry deploymentent is mostly containarized
 
-#### Nginx
- We run an Nginx instance in the VPS that handles SSL termination and redirects the request to `http://localhost:8081` where its listen and responded to by the sentry deployment
+#### NGINX
+ The VPS should run an NGINX instance that handles SSL termination and redirects the request to `http://localhost:8081` where its listen and responded to by the sentry deployment
 
 #### Certbot
- To get the SSL certificates for `sentry.meticulousespresso.com` used by Nginx
+ To get the SSL certificates for `sentry.meticulousespresso.com` used by NGINX
