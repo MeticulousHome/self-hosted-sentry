@@ -45,6 +45,6 @@ source install/geoip.sh
 source install/setup-js-sdk-assets.sh
 source install/wrap-up.sh
 
-# make this run on the hetzner server if 
+# make this run on the hetzner server if
 # everything went allright :P
 source ./configure-swap.sh

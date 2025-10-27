@@ -1,4 +1,4 @@
-services:  
+services:
   kafka:
       mem_limit: 6g
       cpus: 2.0
