@@ -31,7 +31,8 @@ jobs:
 
       - name: Merge upstream into your branch
         run: |
-          git checkout master
+          git checkout -B master origin/master
+          git branch --set-upstream-to=origin/master master
           git rebase upstream/master
 
       - name: Push updates to fork
