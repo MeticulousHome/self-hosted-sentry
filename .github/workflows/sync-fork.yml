@@ -15,6 +15,7 @@ jobs:
       - name: Checkout fork
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Git
@@ -25,7 +26,8 @@ jobs:
       - name: fetch upstream changes remote
         run: |
           git remote add upstream https://github.com/getsentry/self-hosted.git
-          git fetch upstream
+          git fetch upstream --prune
+          git fetch upstream --tags --force
 
       - name: Merge upstream into your branch
         run: |
@@ -37,4 +39,5 @@ jobs:
           PAT: ${{ secrets.K09_PAT }}
         run: |
           git remote set-url origin https://github-actions:${PAT}@github.com/${GITHUB_REPOSITORY}.git
-          git push origin master --follow-tags
+          git push origin master
+          git push origin --tags
