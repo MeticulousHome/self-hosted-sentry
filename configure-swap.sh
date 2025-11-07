@@ -71,31 +71,50 @@ echo ""
 echo " > Checking use of Swap space"
 echo ""
 # check use of swap space
-SWAP_CHECK="$(swapon --show)"
+SWAP_SIZE="$(swapon --show=SIZE | tail -1 | tr -d ' ')"
+NEW_SWAPFILE_SIZE=16
+MINIMUM_SPACE_REQUIRED=16
 
-if [ -n "$SWAP_CHECK" ]; then
-  echo "   -> swap space already configured"
-  echo "$SWAP_CHECK" | awk 'END{print}'
+available_space=$(df --output=avail -BG / | tail -1 | sed 's/G//' | tr -d ' ')
+
+CREATE_SWAP_FILE=0 #false
+
+if [ -n "$SWAP_SIZE" ]; then
+  SWAP_SIZE=$(echo "$SWAP_SIZE" | sed 's/G//')
+  if ((SWAP_SIZE < MINIMUM_SPACE_REQUIRED)); then
+    echo "insufficient swap space, $MINIMUM_SPACE_REQUIRED G is necessary, resizing"
+    if (((available_space + SWAP_SIZE) < MINIMUM_SPACE_REQUIRED)); then
+      echo " [x] Less than $MINIMUM_SPACE_REQUIRED G available, cannot set up swap space"
+      echo " [x] Sentry might run into issues if going forward "
+    else
+      NEW_SWAPFILE_SIZE=$((MINIMUM_SPACE_REQUIRED - SWAP_SIZE))
+      CREATE_SWAP_FILE=1
+    fi
+  else
+    echo "   -> swap space already configured to $SWAP_SIZE"
+  fi
 else
-  # set up swapspace
-  MINIMUM_SPACE_REQUIRED=4
-
-  available_space=$(df --output=avail -BG / | tail -1 | sed 's/G//' | tr -d ' ')
-
   if ((available_space < MINIMUM_SPACE_REQUIRED)); then
     echo " [x] Less than $MINIMUM_SPACE_REQUIRED G available, cannot set up swap space"
-    exit 1
+    echo " [x] Sentry might run into issues if going forward "
+  else
+    CREATE_SWAP_FILE=1
   fi
+fi
 
-  SWAP_SIZE="${MINIMUM_SPACE_REQUIRED}G"
-  fallocate -l "$SWAP_SIZE" /swapfile
-  chmod 600 /swapfile
-  mkswap /swapfile
-  swapon /swapfile
+if ((CREATE_SWAP_FILE == 1)); then
+  # set up swapspace
+
+  SWAP_SIZE="${NEW_SWAPFILE_SIZE}G"
+  SWAPFILE_PATH="/swapfile$NEW_SWAPFILE_SIZE"
+  fallocate -l "$SWAP_SIZE" "$SWAPFILE_PATH"
+  chmod 600 "$SWAPFILE_PATH"
+  mkswap "$SWAPFILE_PATH"
+  swapon "$SWAPFILE_PATH"
 
   #save the swap config
   echo "   -> Saving Swap space config"
-  echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+  echo "$SWAPFILE_PATH none swap sw 0 0" | sudo tee -a /etc/fstab
 fi
 
 echo ""
