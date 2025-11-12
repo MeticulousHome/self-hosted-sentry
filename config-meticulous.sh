@@ -79,19 +79,37 @@ available_space=$(df --output=avail -BG / | tail -1 | sed 's/G//' | tr -d ' ')
 
 CREATE_SWAP_FILE=0 #false
 
+# This relies that the swapon output resembles
+# NAME      TYPE SIZE USED PRIO
+# /swap.img file   8G   0B   -2
+# .
+# .
+# .
+
 if [ -n "$SWAP_SIZE" ]; then
-  SWAP_SIZE=$(echo "$SWAP_SIZE" | sed 's/G//')
-  if ((SWAP_SIZE < MINIMUM_SPACE_REQUIRED)); then
-    echo "insufficient swap space, $MINIMUM_SPACE_REQUIRED G is necessary, resizing"
-    if (((available_space + SWAP_SIZE) < MINIMUM_SPACE_REQUIRED)); then
+  PRESENT_SWAP_SPACES=$(swapon | grep -c ^)
+  TOTAL_SWAP_SPACE=0
+  while IFS= read -r line; do
+    TOTAL_SWAP_SPACE=$((TOTAL_SWAP_SPACE + $(echo "$line" | sed 's/G//' | tr -d ' ')))
+  done < <(swapon --show=SIZE | tail -n "$((PRESENT_SWAP_SPACES - 1))")
+
+  # SWAP_SIZE=$(echo "$SWAP_SIZE" | sed 's/G//')
+  # if ((SWAP_SIZE < MINIMUM_SPACE_REQUIRED)); then
+  if ((TOTAL_SWAP_SPACE < MINIMUM_SPACE_REQUIRED)); then
+    # echo "insufficient swap space , $MINIMUM_SPACE_REQUIRED G is necessary, resizing"
+    echo "insufficient swap space ($TOTAL_SWAP_SPACE G) , $MINIMUM_SPACE_REQUIRED G is necessary, resizing"
+    # if (((available_space + SWAP_SIZE) < MINIMUM_SPACE_REQUIRED)); then
+    if (((available_space + TOTAL_SWAP_SPACE) < MINIMUM_SPACE_REQUIRED)); then
       echo " [x] Less than $MINIMUM_SPACE_REQUIRED G available, cannot set up swap space"
       echo " [x] Sentry might run into issues if going forward "
     else
-      NEW_SWAPFILE_SIZE=$((MINIMUM_SPACE_REQUIRED - SWAP_SIZE))
+      # NEW_SWAPFILE_SIZE=$((MINIMUM_SPACE_REQUIRED - SWAP_SIZE))
+      NEW_SWAPFILE_SIZE=$((MINIMUM_SPACE_REQUIRED - TOTAL_SWAP_SPACE))
       CREATE_SWAP_FILE=1
     fi
   else
-    echo "   -> swap space already configured to $SWAP_SIZE"
+    # echo "   -> swap space already configured to $SWAP_SIZE"
+    echo "   -> swap space already configured to $TOTAL_SWAP_SPACE"
   fi
 else
   if ((available_space < MINIMUM_SPACE_REQUIRED)); then
