@@ -11,6 +11,7 @@ ExecStop=docker compose -f "${SENTRY_PATH}/docker-compose.yml" -f "${SENTRY_PATH
 Restart=always
 RestartSec=10
 RestartPreventExitStatus=10
+StandardOutput=null
 
 [Install]
 WantedBy=multi-user.target
