@@ -145,9 +145,12 @@ echo ""
 systemctl daemon-reexec
 systemctl daemon-reload
 
+set +e
 systemctl status "$SERVICE_NAME" >/dev/null 2>&1
-# if the file is not present
-if [ $? -ne 0 ]; then
+RESULT=$?
+set -e
+# if the unit is not found systemctl returns 4
+if [ $RESULT -eq 4 ]; then
   echo "Installing service…"
   cp -u "$SENTRY_DIR/$SERVICE_NAME" "$SYSTEMD_SERVICE_DIR"
 
@@ -155,8 +158,12 @@ if [ $? -ne 0 ]; then
   systemctl daemon-reload
 fi
 
+set +e
 systemctl status "$SERVICE_NAME" >/dev/null 2>&1
-if [ $? -eq 0 ]; then
+RESULT=$?
+set -e
+if [ $RESULT -lt 4 ]; then
+  echo "$RESULT"
   echo " $SERVICE_NAME successfully installed"
   echo " -> setting \$SENTRY_PATH environment variable to '$SENTRY_DIR'"
 
@@ -169,7 +176,7 @@ if [ $? -eq 0 ]; then
   echo ""
   echo " SENTRY_PATH variable successfully saved as $SENTRY_DIR"
 
-  systemd enable "$SERVICE_NAME"
+  systemctl enable "$SERVICE_NAME"
 
   echo " $SERVICE_NAME is enabled, will start on every boot"
   echo ""
