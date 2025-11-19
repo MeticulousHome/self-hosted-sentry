@@ -87,41 +87,30 @@ set_swap_space() {
 
   print_header "Checking use of Swap space"
   # check use of swap space
-  SWAP_SIZE="$(swapon --show=SIZE | tail -1 | tr -d ' ')"
-  NEW_SWAPFILE_SIZE=16
-  MINIMUM_SPACE_REQUIRED=16
-
-  available_space=$(df --output=avail -BG / | tail -1 | sed 's/G//' | tr -d ' ')
+  CURRENT_SWAP_SIZE="$(free -m | grep Swap | awk '{print $2}' | tr -d ' ')" #MB
+  # This relies that the 'free -m' command output resembles
+  #                total        used        free      shared  buff/cache   available
+  # Mem:           63434       11130       48407         236        4841       52304
+  # Swap:           8191           0        8191
+  NEW_SWAPFILE_SIZE=$((16 * 1024))      #MB
+  MINIMUM_SPACE_REQUIRED=$((16 * 1024)) #MB
+  available_space=$(df --output=avail -BM / | tail -1 | sed 's/M//' | tr -d ' ')
 
   CREATE_SWAP_FILE=0 #false
 
-  # This relies that the swapon output resembles
-  # NAME      TYPE SIZE USED PRIO
-  # /swap.img file   8G   0B   -2
-  # .
-  # .
-  # .
+  if [ $CURRENT_SWAP_SIZE -ne 0 ]; then
 
-  if [ -n "$SWAP_SIZE" ]; then
-    PRESENT_SWAP_SPACES=$(swapon | grep -c ^)
-    TOTAL_SWAP_SPACE=0
-    while IFS= read -r line; do
-      TOTAL_SWAP_SPACE=$((TOTAL_SWAP_SPACE + $(echo "$line" | sed 's/G//' | tr -d ' ')))
-    done < <(swapon --show=SIZE | tail -n "$((PRESENT_SWAP_SPACES - 1))")
-
-    # SWAP_SIZE=$(echo "$SWAP_SIZE" | sed 's/G//')
-    # if ((SWAP_SIZE < MINIMUM_SPACE_REQUIRED)); then
-    if ((TOTAL_SWAP_SPACE < MINIMUM_SPACE_REQUIRED)); then
-      print_message "insufficient swap space ($TOTAL_SWAP_SPACE G) , $MINIMUM_SPACE_REQUIRED G is necessary, resizing"
-      if (((available_space + TOTAL_SWAP_SPACE) < MINIMUM_SPACE_REQUIRED)); then
+    if ((CURRENT_SWAP_SIZE < MINIMUM_SPACE_REQUIRED)); then
+      print_message "insufficient swap space ($CURRENT_SWAP_SIZE MB) , $MINIMUM_SPACE_REQUIRED MB is necessary, resizing"
+      if (((available_space + CURRENT_SWAP_SIZE) < MINIMUM_SPACE_REQUIRED)); then
         print_message "Less than $MINIMUM_SPACE_REQUIRED G available, cannot set up swap space" "[x]"
         print_message "Sentry might run into issues if going forward " "[x]"
       else
-        NEW_SWAPFILE_SIZE=$((MINIMUM_SPACE_REQUIRED - TOTAL_SWAP_SPACE))
+        NEW_SWAPFILE_SIZE=$((MINIMUM_SPACE_REQUIRED - CURRENT_SWAP_SIZE))
         CREATE_SWAP_FILE=1
       fi
     else
-      print_message "swap space already configured to $TOTAL_SWAP_SPACE"
+      print_message "swap space already configured to $CURRENT_SWAP_SIZE MB"
     fi
   else
     if ((available_space < MINIMUM_SPACE_REQUIRED)); then
@@ -135,16 +124,19 @@ set_swap_space() {
   if ((CREATE_SWAP_FILE == 1)); then
     # set up swapspace
 
-    SWAP_SIZE="${NEW_SWAPFILE_SIZE}G"
+    CURRENT_SWAP_SIZE="${NEW_SWAPFILE_SIZE}MiB"
     SWAPFILE_PATH="/swapfile$NEW_SWAPFILE_SIZE"
-    fallocate -l "$SWAP_SIZE" "$SWAPFILE_PATH"
+    if [ -f "$SWAPFILE_PATH" ]; then
+      SWAPFILE_PATH="$SWAPFILE_PATH-1"
+    fi
+    fallocate -l "$CURRENT_SWAP_SIZE" "$SWAPFILE_PATH"
     chmod 600 "$SWAPFILE_PATH"
     mkswap "$SWAPFILE_PATH"
     swapon "$SWAPFILE_PATH"
 
     #save the swap config
     print_message "Saving Swap space config"
-    print_message "$SWAPFILE_PATH none swap sw 0 0" | sudo tee -a /etc/fstab
+    echo "$SWAPFILE_PATH none swap sw 0 0" | sudo tee -a /etc/fstab
   fi
 
 }
