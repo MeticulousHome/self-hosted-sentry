@@ -1,0 +1,16 @@
+[Unit]
+Description=Meticulous Sentry instance
+After=nginx.service
+
+#make sure $SENTRY_PATH is defined (should be done in meticulous-config.sh)
+[Service]
+EnvironmentFile=/opt/sentrySH/env
+ExecStartPre=-/bin/bash -c 'if [[ -z "$SENTRY_PATH" ]] && echo "SENTRY_PATH not found" && exit 10;'
+ExecStart=docker compose -f "${SENTRY_PATH}/docker-compose.yml" -f "${SENTRY_PATH}/docker-compose.override.yml" --env-file "${SENTRY_PATH}/.env" --env-file "${SENTRY_PATH}/.env.custom" up
+ExecStop=docker compose -f "${SENTRY_PATH}/docker-compose.yml" -f "${SENTRY_PATH}/docker-compose.override.yml" --env-file "${SENTRY_PATH}/.env" --env-file "${SENTRY_PATH}/.env.custom" down
+Restart=always
+RestartSec=10
+RestartPreventExitStatus=10
+
+[Install]
+WantedBy=multi-user.target
