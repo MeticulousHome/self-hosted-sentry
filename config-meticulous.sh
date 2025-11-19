@@ -3,6 +3,7 @@ set -euo pipefail
 
 # CSRF_TRUSTED_ORIGIN="http://65.109.232.162:9000"
 CSRF_TRUSTED_ORIGIN="https://sentry.meticulousespresso.com"
+SENTRY_DIR="$(dirname "$0")"
 
 # modify generated configuration files
 
@@ -135,10 +136,51 @@ if ((CREATE_SWAP_FILE == 1)); then
   echo "$SWAPFILE_PATH none swap sw 0 0" | sudo tee -a /etc/fstab
 fi
 
+SERVICE_NAME="meticulous-sentry.service"
+SYSTEMD_SERVICE_DIR="/etc/systemd/system"
+
+echo " > Setting up $SERVICE_NAME"
 echo ""
-echo "-----------------------------------------------------------------"
-echo ""
-echo "Now You're all set! Trust me :P"
-echo ""
-echo "-----------------------------------------------------------------"
-echo ""
+
+systemctl daemon-reexec
+systemctl daemon-reload
+
+systemctl status "$SERVICE_NAME" >/dev/null 2>&1
+# if the file is not present
+if [ $? -ne 0 ]; then
+  echo "Installing service…"
+  cp -u "$SENTRY_DIR/$SERVICE_NAME" "$SYSTEMD_SERVICE_DIR"
+
+  systemctl daemon-reexec
+  systemctl daemon-reload
+fi
+
+systemctl status "$SERVICE_NAME" >/dev/null 2>&1
+if [ $? -eq 0 ]; then
+  echo " $SERVICE_NAME successfully installed"
+  echo " -> setting \$SENTRY_PATH environment variable to '$SENTRY_DIR'"
+
+  if [ ! -d "/opt/sentrySH" ]; then
+    mkdir -p "/opt/sentrySH"
+  fi
+
+  echo "SENTRY_PATH=$SENTRY_DIR" >"/opt/sentrySH/env"
+
+  echo ""
+  echo " SENTRY_PATH variable successfully saved as $SENTRY_DIR"
+
+  systemd enable "$SERVICE_NAME"
+
+  echo " $SERVICE_NAME is enabled, will start on every boot"
+  echo ""
+  echo " You can start the service now using"
+  echo ""
+  echo " systemctl start $SERVICE_NAME"
+
+  echo " You can run the service using"
+  echo " systemctl start $SERVICE_NAME"
+else
+  echo " failed to install $SERVICE_NAME"
+  echo " You can still run the service manually executing"
+  echo " docker compose -f $SENTRY_DIR/docker-compose.yml -f $SENTRY_DIR/docker-compose.override.yml --env-file .env --env-file .env.custom up --wait"
+fi
