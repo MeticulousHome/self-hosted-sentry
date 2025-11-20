@@ -2,7 +2,7 @@
 set -euo pipefail
 
 CSRF_TRUSTED_ORIGIN="https://sentry.meticulousespresso.com"
-SENTRY_DIR="$(dirname "$0")"
+SENTRY_DIR="$(dirname "$(realpath "$0")")"
 
 # modify generated configuration files
 echo ""
